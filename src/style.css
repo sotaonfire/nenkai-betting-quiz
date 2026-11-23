@@ -1,0 +1,361 @@
+/* ============================================================
+   リッチカジノ テーマ
+   黒 × ゴールド × クリムゾン ＋ テーブルのフェルト緑
+   ============================================================ */
+:root {
+  /* 地色 */
+  --bg: #08060a;
+  --bg-deep: #150609;
+  --panel: #1b0d13;
+  --panel-2: #26121b;
+  --panel-3: #33182250;
+
+  /* フェルト（テーブル面） */
+  --felt: #0f3b2c;
+  --felt-2: #0a2a1f;
+  --felt-line: #1f6b4f;
+
+  /* 金 */
+  --gold: #f0c04a;
+  --gold-hi: #ffe79c;
+  --gold-lo: #a97c22;
+  --gold-dim: #6f4f14;
+  --gold-line: rgba(240, 192, 74, 0.34);
+
+  /* 赤 */
+  --red: #e03049;
+  --red-hi: #ff6b7d;
+  --red-deep: #6d0f1e;
+  --red-wine: #43101c;
+
+  /* 文字 */
+  --fg: #f8efe3;
+  --muted: #b59aa0;
+  --green: #35d08a;
+
+  /* 旧トークンの別名（司会画面などで使用） */
+  --line: #45202e;
+  --bg-2: #130a0f;
+
+  --radius: 14px;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+  --inner-gold: inset 0 0 0 1px var(--gold-line);
+
+  --display: 'Cinzel', 'Shippori Mincho B1', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+  --body: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  color: var(--fg);
+  font-family: var(--body);
+  background-color: var(--bg);
+  /* 中央から赤くほの明るい、ビロードの間接照明 */
+  background-image:
+    radial-gradient(1100px 700px at 50% -15%, rgba(224, 48, 73, 0.22) 0%, transparent 62%),
+    radial-gradient(900px 600px at 10% 110%, rgba(240, 192, 74, 0.09) 0%, transparent 60%),
+    radial-gradient(1200px 900px at 50% 50%, var(--bg-deep) 0%, var(--bg) 70%);
+  background-attachment: fixed;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ざらつき。画像を使わずに質感を足す */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg-2);
+  border: 1px solid #4a2130;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+/* ---------------- 見出し ---------------- */
+.display {
+  font-family: var(--display);
+  letter-spacing: 0.04em;
+}
+
+.foil {
+  background: linear-gradient(176deg, var(--gold-hi) 6%, var(--gold) 38%, #b8882b 62%, var(--gold-hi) 94%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5));
+}
+
+/* 金の飾り罫 */
+.rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gold);
+}
+.rule::before,
+.rule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-line), transparent);
+}
+.rule-mark::after {
+  content: '♦';
+  font-size: 0.7em;
+  opacity: 0.8;
+}
+
+/* ---------------- ボタン ---------------- */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #512433;
+  background: linear-gradient(180deg, #2b141e, #1d0c14);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 700;
+  color: var(--fg);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+.btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* 金のプレート */
+.btn-primary {
+  background: linear-gradient(180deg, var(--gold-hi) 0%, var(--gold) 46%, #c08f28 100%);
+  border-color: #6b4c12;
+  color: #2a1b00;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 3px 0 #6b4c12,
+    0 10px 24px rgba(240, 192, 74, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* ビロードの赤 */
+.btn-danger {
+  background: linear-gradient(180deg, #8d1527, var(--red-deep));
+  border-color: #a8263a;
+  color: #ffdfe4;
+  box-shadow: 0 3px 0 #4a0a16, inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.btn-ghost {
+  background: transparent;
+  border-color: #452030;
+  box-shadow: none;
+}
+.btn-lg {
+  padding: 16px 22px;
+  font-size: 1.1rem;
+  border-radius: 14px;
+}
+.btn-block {
+  width: 100%;
+}
+
+/* ---------------- 面 ---------------- */
+.card {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 40%),
+    linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid #45202e;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow), var(--inner-gold);
+}
+
+/* テーブルのフェルト面 */
+.felt {
+  background:
+    radial-gradient(120% 100% at 50% 0%, rgba(255, 255, 255, 0.07), transparent 60%),
+    linear-gradient(180deg, var(--felt), var(--felt-2));
+  border: 1px solid var(--felt-line);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5), var(--shadow);
+  border-radius: var(--radius);
+}
+
+.muted {
+  color: var(--muted);
+}
+.gold {
+  color: var(--gold);
+}
+.green {
+  color: var(--green);
+}
+.red {
+  color: var(--red-hi);
+}
+.center {
+  text-align: center;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.row-wrap {
+  flex-wrap: wrap;
+}
+.spacer {
+  flex: 1;
+}
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+/* ---------------- ラベル（チップ風の小バッジ） ---------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #2d1620, #1d0d14);
+  border: 1px solid #522535;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.chip-gold {
+  background: linear-gradient(180deg, rgba(240, 192, 74, 0.26), rgba(240, 192, 74, 0.08));
+  border-color: var(--gold-lo);
+  color: var(--gold-hi);
+}
+.chip-green {
+  background: linear-gradient(180deg, rgba(53, 208, 138, 0.26), rgba(53, 208, 138, 0.08));
+  border-color: #1d7d53;
+  color: #8bf0c0;
+}
+.chip-red {
+  background: linear-gradient(180deg, rgba(224, 48, 73, 0.3), rgba(224, 48, 73, 0.1));
+  border-color: #9b2134;
+  color: #ffc0c8;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- カジノチップ ---------------- */
+.coin-chip {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    repeating-conic-gradient(from 0deg, var(--gold) 0deg 14deg, #8d6416 14deg 28deg);
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+.coin-chip > span {
+  display: inline-grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #2a1a08, #16100a);
+  border: 1px solid var(--gold-lo);
+  color: var(--gold-hi);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- モーダル ---------------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 2, 4, 0.78);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 100;
+}
+.modal {
+  width: min(480px, 100%);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--gold-lo);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: var(--shadow), inset 0 0 0 1px rgba(240, 192, 74, 0.18);
+}
+.modal h3 {
+  font-family: var(--display);
+}
+
+/* ---------------- 通信切断バナー ---------------- */
+.conn-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px;
+  background: linear-gradient(180deg, #8d1527, var(--red-deep));
+  border-top: 1px solid #a8263a;
+  color: #ffdfe4;
+  text-align: center;
+  font-weight: 800;
+  z-index: 90;
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+  body::before {
+    display: none;
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "nenkai-betting-quiz",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "test": "node --test test/settlement.test.mjs",
+    "check:rules": "node test/rules-check.mjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && firebase deploy",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules"
+  },
+  "dependencies": {
+    "firebase": "^11.10.0",
+    "qrcode": "^1.5.4",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^6.0.7"
+  }
+}

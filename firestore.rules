@@ -1,0 +1,184 @@
+rules_version = '2';
+
+// ============================================================
+//  忘年会ベッティングクイズ セキュリティルール
+//
+//  ★デプロイ前に hostUids() の UID を必ず差し替えてください★
+//  （Firebase Console > Authentication で作った司会アカウントの UID）
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- 司会（ホスト）判定 ----------
+    function hostUids() {
+      return [
+        'Lh8t0y5t7ESzHA8yQD8M73KzRLq1'
+      ];
+    }
+    function isHost() {
+      return request.auth != null && request.auth.uid in hostUids();
+    }
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // ---------- ドキュメント参照ヘルパ ----------
+    function claimOf(uid) {
+      return get(/databases/$(database)/documents/claims/$(uid));
+    }
+    function gameData() {
+      return get(/databases/$(database)/documents/game/main).data;
+    }
+    function tableOf(tableId) {
+      return get(/databases/$(database)/documents/tables/$(tableId));
+    }
+    function secretPass() {
+      return get(/databases/$(database)/documents/config/secret).data.passphrase;
+    }
+
+    // ---------- 賭け金バリデーション ----------
+    // 所持 >= 100 : 100の倍数で 100 以上 所持コイン以下
+    // 所持 <  100 : 0 のみ（賭けられないテーブル）
+    //   0ちょうどではなく100未満で判定するのは、補填ミスなどで端数が出たとき
+    //   「賭けられないのに0も送れない」状態でロックされるのを防ぐため
+    function betValid(bet, coins) {
+      return bet is int
+        && (coins >= 100
+              ? (bet >= 100 && bet <= coins && bet % 100 == 0)
+              : bet == 0);
+    }
+
+    // ---------- 送信（賭け金＋回答）の可否 ----------
+    function canSubmit(q, tableId) {
+      let claim = claimOf(request.auth.uid);
+      let g = gameData();
+      let t = tableOf(tableId);
+      let d = request.resource.data;
+      return signedIn()
+        && claim != null
+        && t != null
+        && claim.data.tableId == tableId
+        && g.phase == 'answering'
+        && int(q) == g.currentQ
+        && d.keys().hasOnly(['questionNo', 'tableId', 'bet', 'answerIndex', 'submittedAt', 'isProxy', 'uid'])
+        && d.questionNo == g.currentQ
+        && d.tableId == tableId
+        && d.answerIndex is int && d.answerIndex >= 0 && d.answerIndex <= 3
+        && betValid(d.bet, t.data.coins)
+        && d.isProxy == false
+        && d.uid == request.auth.uid
+        && d.submittedAt == request.time;
+    }
+
+    function canPublishBet(q, tableId) {
+      let claim = claimOf(request.auth.uid);
+      let g = gameData();
+      let t = tableOf(tableId);
+      let d = request.resource.data;
+      return signedIn()
+        && claim != null
+        && t != null
+        && claim.data.tableId == tableId
+        && g.phase == 'answering'
+        && int(q) == g.currentQ
+        && d.keys().hasOnly(['questionNo', 'tableId', 'bet', 'submittedAt'])
+        && d.questionNo == g.currentQ
+        && d.tableId == tableId
+        && betValid(d.bet, t.data.coins)
+        && d.submittedAt == request.time;
+    }
+
+    function ownsTable(tableId) {
+      let claim = claimOf(request.auth.uid);
+      return signedIn() && claim != null && claim.data.tableId == tableId;
+    }
+
+    // ============================================================
+    //  各コレクション
+    // ============================================================
+
+    // ゲーム進行状態（フェーズ・現在の問題番号）
+    match /game/{doc} {
+      allow read: if signedIn();
+      allow write: if isHost();
+    }
+
+    // テーブル（所持コイン・正解数・最終順位）
+    match /tables/{tableId} {
+      allow read: if signedIn();
+      allow write: if isHost();
+    }
+
+    // 問題文と選択肢（正解は含めない）
+    match /questions/{q} {
+      allow read: if signedIn();
+      allow write: if isHost();
+    }
+
+    // 正解データ。司会だけが読み書きできる
+    match /answers/{q} {
+      allow read, write: if isHost();
+    }
+
+    // 正解発表用。司会が answers から値をコピーした時点で全員に見える
+    match /reveals/{q} {
+      allow read: if signedIn();
+      allow write: if isHost();
+    }
+
+    // 精算結果
+    match /settlements/{q} {
+      allow read: if signedIn();
+      allow write: if isHost();
+    }
+
+    // 操作ログ（補填・代理入力・取り消しなど）
+    match /logs/{id} {
+      allow read, write: if isHost();
+    }
+
+    // 端末とテーブルの紐付け（合言葉が一致したときだけ作れる）
+    // 既存の claim を上書きできる＝端末故障時に別端末で入り直せる
+    match /claims/{uid} {
+      allow read: if isHost() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['tableId', 'pass', 'at'])
+        && request.resource.data.tableId is string
+        && request.resource.data.pass == secretPass()
+        && tableOf(request.resource.data.tableId) != null;
+      allow delete: if isHost();
+    }
+
+    // 端末の接続状況（司会画面の「接続」表示用）
+    match /presence/{tableId} {
+      allow read: if signedIn();
+      allow write: if isHost() || (
+        ownsTable(tableId)
+        && request.resource.data.keys().hasOnly(['tableId', 'at', 'uid'])
+        && request.resource.data.tableId == tableId
+      );
+    }
+
+    // 送信内容。他テーブルの回答は読めない
+    match /submissions/{q}/items/{tableId} {
+      allow read: if isHost() || ownsTable(tableId);
+      allow create: if isHost() || canSubmit(q, tableId);
+      allow update: if isHost();   // 送信後ロック（司会の修正のみ）
+      allow delete: if isHost();   // 送信の取り消し
+    }
+
+    // スクリーン公開用。賭け金だけを持つので誰でも読める
+    match /publicBets/{q}/items/{tableId} {
+      allow read: if signedIn();
+      allow create: if isHost() || canPublishBet(q, tableId);
+      allow update, delete: if isHost();
+    }
+
+    // 合言葉などの非公開設定。ルール内の get() からのみ参照される
+    match /config/{doc} {
+      allow read, write: if isHost();
+    }
+  }
+}
