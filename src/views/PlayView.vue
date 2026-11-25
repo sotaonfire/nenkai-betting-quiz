@@ -20,6 +20,7 @@ import {
   startPresenceHeartbeat,
   submitAnswer,
   validateBet,
+  watchClaimReleased,
 } from '../lib/player.js'
 import { RULES, multiplierFor } from '../config.js'
 import { CHOICE_LABELS, computeRanks, fmt, fmtDelta } from '../lib/util.js'
@@ -38,6 +39,14 @@ const error = ref('')
 
 const mySubmission = useMySubmission(tableId)
 let stopHeartbeat = null
+let stopClaimWatch = null
+
+// 端末解除・リセットされたら入室画面に戻す（残すと送信できないまま入室中に見えてしまう）
+function onReleased() {
+  stopHeartbeat?.()
+  stopClaimWatch?.()
+  router.replace({ path: '/', query: { released: '1' } })
+}
 
 onMounted(async () => {
   try {
@@ -50,6 +59,7 @@ onMounted(async () => {
     }
     tableId.value = claimed
     stopHeartbeat = startPresenceHeartbeat(() => tableId.value)
+    stopClaimWatch = watchClaimReleased(onReleased)
   } catch (e) {
     // 初期化に失敗しても画面は開く。購読が復帰すれば自動で表示される
     const remembered = rememberedTableId()
@@ -59,12 +69,16 @@ onMounted(async () => {
     }
     tableId.value = remembered
     stopHeartbeat = startPresenceHeartbeat(() => tableId.value)
+    stopClaimWatch = watchClaimReleased(onReleased)
   } finally {
     booting.value = false
   }
 })
 
-onUnmounted(() => stopHeartbeat?.())
+onUnmounted(() => {
+  stopHeartbeat?.()
+  stopClaimWatch?.()
+})
 
 const myTable = computed(() => tableMap.value[tableId.value] ?? null)
 // テーブルの購読が届く前は「所持0」と区別する。

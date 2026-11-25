@@ -1,7 +1,6 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   getDoc,
   getDocs,
   query,
@@ -20,6 +19,7 @@ import {
   configRef,
   gameRef,
   logsCol,
+  presenceRef,
   publicBetRef,
   publicBetsCol,
   questionRef,
@@ -385,6 +385,9 @@ export async function setFinalRanks(rankMap) {
 // ============================================================
 
 export async function resetGame() {
+  // 先に全端末の入室を解除し、初期化の途中で送信が混ざらないようにする
+  const claims = await getDocs(claimsCol())
+  await removeDevices(claims.docs, TABLE_IDS)
   // 送信・公開賭け金・正解発表・精算結果を全問分消す
   for (const no of QUESTION_NOS) {
     const [subs, bets] = await Promise.all([getDocs(submissionsCol(no)), getDocs(publicBetsCol(no))])
@@ -414,10 +417,24 @@ export async function resetGame() {
   await logAction('reset', { reason: 'ゲームの初期化' })
 }
 
+/**
+ * 端末の紐付け（claims）と入室表示（presence）をまとめて消す。
+ * presence を残すと、スクリーンや司会画面が「入室済み」「切断」のままになる。
+ */
+async function removeDevices(claimDocs, tableIds) {
+  const refs = [...claimDocs.map((d) => d.ref), ...tableIds.map((id) => presenceRef(id))]
+  // 1回のバッチの上限（500件）を超えないように分ける
+  for (let i = 0; i < refs.length; i += 400) {
+    const batch = writeBatch(db)
+    refs.slice(i, i + 400).forEach((ref) => batch.delete(ref))
+    await batch.commit()
+  }
+}
+
 /** テーブルの端末紐付けを解除する（別の端末で入り直させたいとき用） */
 export async function releaseTable(tableId) {
   const snap = await getDocs(query(claimsCol(), where('tableId', '==', String(tableId))))
-  await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)))
+  await removeDevices(snap.docs, [String(tableId)])
   await logAction('release', { tableId: String(tableId), reason: '端末の紐付け解除' })
   return snap.size
 }

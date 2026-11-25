@@ -1,4 +1,4 @@
-import { getDoc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore'
+import { getDoc, onSnapshot, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore'
 import { db, auth, ensureAnonymousUser } from '../firebase.js'
 import { claimRef, presenceRef, publicBetRef, submissionRef } from './paths.js'
 import { RULES } from '../config.js'
@@ -18,6 +18,14 @@ function remember(tableId) {
     localStorage.setItem(LS_TABLE, String(tableId))
   } catch {
     /* プライベートモードなどで失敗しても動作に影響させない */
+  }
+}
+
+function forget() {
+  try {
+    localStorage.removeItem(LS_TABLE)
+  } catch {
+    /* 失敗しても動作に影響させない */
   }
 }
 
@@ -62,6 +70,27 @@ export async function joinTable({ tableId, passphrase }) {
   remember(tableId)
   await touchPresence(tableId)
   return String(tableId)
+}
+
+/**
+ * 司会に端末の紐付けを解除された（端末解除・リセット）ことを検知する。
+ * 通信切断中のキャッシュだけを見て誤って退室させないよう、サーバー確認済みの結果だけを使う。
+ */
+export function watchClaimReleased(onReleased) {
+  const user = auth.currentUser
+  if (!user) return () => {}
+  return onSnapshot(
+    claimRef(user.uid),
+    { includeMetadataChanges: true },
+    (snap) => {
+      if (snap.exists() || snap.metadata.fromCache || snap.metadata.hasPendingWrites) return
+      forget()
+      onReleased()
+    },
+    () => {
+      /* 読めないときは何もしない（退室はさせない） */
+    },
+  )
 }
 
 /** 端末が生きていることを司会画面に伝える */

@@ -20,6 +20,7 @@ const canJoin = computed(() => !!tableId.value && passphrase.value.trim().length
 
 onMounted(async () => {
   const fromQr = route.query.t ? String(route.query.t) : ''
+  if (route.query.released) error.value = '入室が解除されました。もう一度テーブルを選んで入室してください'
   try {
     await ensureAnonymousUser()
     startBaseSubscriptions()

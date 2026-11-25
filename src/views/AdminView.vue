@@ -37,6 +37,7 @@ import {
   undoSettlement,
 } from '../lib/host.js'
 import { PHASE_ORDER, phaseLabel } from '../lib/phases.js'
+import { useNow } from '../lib/now.js'
 import { RULES, TABLE_IDS, multiplierFor } from '../config.js'
 import { CHOICE_LABELS, fmt, fmtDelta, toMillis } from '../lib/util.js'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
@@ -103,6 +104,7 @@ async function logout() {
 }
 
 // ---------------- 進行 ----------------
+const now = useNow()
 const subsMap = computed(() => hostSubmissions.value)
 const presenceMap = computed(() => hostPresence.value)
 const logList = computed(() => hostLogs.value)
@@ -120,7 +122,7 @@ const rows = computed(() =>
       coins: Number(t.coins ?? 0),
       sub,
       pub,
-      online: seen > 0 && Date.now() - seen < RULES.PRESENCE_STALE_MS,
+      online: seen > 0 && now.value - seen < RULES.PRESENCE_STALE_MS,
       everSeen: seen > 0,
       mismatch: !!sub && !!pub && sub.bet !== pub.bet,
       result: settlement.value?.results?.[t.id] ?? null,
@@ -387,7 +389,7 @@ async function submitProxy() {
     <ConfirmDialog
       :open="resetStep === 1"
       title="ゲームを初期化します"
-      message="全テーブルのコインを1,000に戻し、送信・精算結果をすべて削除します。この操作は取り消せません。"
+      message="全テーブルのコインを1,000に戻し、送信・精算結果をすべて削除します。全端末の入室も解除されるため、各テーブルは入り直しが必要です。この操作は取り消せません。"
       confirm-label="続行"
       danger
       @confirm="resetStep = 2"

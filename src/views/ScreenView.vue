@@ -18,11 +18,13 @@ import {
 import { RULES, TABLE_IDS, multiplierFor } from '../config.js'
 import { CHOICE_LABELS, computeRanks, fmt, fmtDelta, toMillis } from '../lib/util.js'
 import { phaseLabel } from '../lib/phases.js'
+import { useNow } from '../lib/now.js'
 import CountdownRing from '../components/CountdownRing.vue'
 import QrCanvas from '../components/QrCanvas.vue'
 
 const booting = ref(true)
 const presence = usePresence()
+const now = useNow()
 const joinUrl = ref('')
 
 onMounted(async () => {
@@ -41,7 +43,7 @@ const joinedIds = computed(() =>
   TABLE_IDS.filter((id) => {
     const p = presence.value[id]
     if (!p) return false
-    return Date.now() - toMillis(p.at) < 5 * 60 * 1000
+    return now.value - toMillis(p.at) < 5 * 60 * 1000
   }),
 )
 
