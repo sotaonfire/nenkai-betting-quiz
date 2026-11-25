@@ -17,6 +17,7 @@ import {
 } from '../lib/store.js'
 import { RULES, TABLE_IDS, multiplierFor } from '../config.js'
 import { CHOICE_LABELS, computeRanks, fmt, fmtDelta, toMillis } from '../lib/util.js'
+import { phaseLabel } from '../lib/phases.js'
 import CountdownRing from '../components/CountdownRing.vue'
 import QrCanvas from '../components/QrCanvas.vue'
 
@@ -83,22 +84,38 @@ const tieGroups = computed(() => {
   })
   return Object.values(byCoins).filter((g) => g.length > 1)
 })
+
+// ---- Macau デザイン用ヘルパー ----
+const SUITS = ['♠', '♥', '♦', '♣']
+const SUIT_RED = [false, true, true, false]
+const pad2 = (n) => String(n ?? 0).padStart(2, '0')
+const maxCoins = computed(() => Math.max(1, ...rows.value.map((r) => r.coins)))
+const barW = (c) => Math.max(3, (c / maxCoins.value) * 100) + '%'
+const inQuestion = computed(() => ['answering', 'closed', 'revealed', 'settled'].includes(phase.value))
+const showResults = computed(() => phase.value === 'revealed' || phase.value === 'settled')
+const pillTone = computed(() =>
+  phase.value === 'answering' ? 'tone-go' : phase.value === 'closed' ? 'tone-stop' : 'tone-gold',
+)
+const podium = computed(() => {
+  const top = ranking.value.slice(0, 3)
+  return [top[1], top[0], top[2]].filter(Boolean)
+})
 </script>
 
 <template>
-  <div class="screen">
-    <div v-if="booting" class="muted center">読み込み中…</div>
+  <div class="screen macau">
+    <div v-if="booting" class="boot"><span class="dots"><i></i><i></i><i></i></span></div>
 
     <template v-else>
+      <div class="bulbs" aria-hidden="true"></div>
       <!-- ヘッダ -->
       <header class="shead">
-        <div class="brand display foil">CWD&nbsp;CASINO</div>
-        <div class="suits" aria-hidden="true">♠ ♥ ♦ ♣</div>
+        <div class="brand latin">CWD CASINO</div>
+        <div class="event">2026 忘年会 BETTING QUIZ</div>
         <div class="spacer"></div>
-        <div v-if="phase !== 'finished'" class="qno display">
-          第<span class="big foil">{{ currentQ }}</span>問 / {{ RULES.QUESTION_COUNT }}
-          <span class="chip" :class="isFinalQuestion ? 'chip-gold' : ''">配当{{ multiplier }}倍</span>
-        </div>
+        <div v-if="inQuestion" class="qno num">QUESTION {{ pad2(currentQ) }} / {{ pad2(RULES.QUESTION_COUNT) }}</div>
+        <span v-if="inQuestion && isFinalQuestion" class="mult-tag big-tag">FINAL ・ 配当{{ multiplier }}倍</span>
+        <div class="pill" :class="pillTone">{{ phaseLabel(phase) }}</div>
       </header>
 
       <div v-if="game?.announcement" class="announce">{{ game.announcement }}</div>
@@ -106,175 +123,186 @@ const tieGroups = computed(() => {
       <!-- ===== 待機中 ===== -->
       <main v-if="phase === 'waiting'" class="body">
         <template v-if="currentQ === 1">
-          <div class="waiting">
-            <div class="qr-area">
-              <QrCanvas :text="joinUrl" :size="300" />
-              <div class="muted" style="margin-top: 12px; font-size: 1.1rem">{{ joinUrl }}</div>
+          <div class="join">
+            <div class="join-copy">
+              <div class="logo latin foil">CWD</div>
+              <div class="logo-sub latin">CASINO</div>
+              <div class="rule" style="width: 22em"><span class="rule-gem"></span></div>
+              <div class="join-lead display">各テーブル1台、スマホでアクセスして参加</div>
+              <div class="join-url num">{{ joinUrl }}</div>
             </div>
-            <div class="join-list">
-              <h2 class="h2 display">入室状況 {{ joinedIds.length }} / {{ RULES.TABLE_COUNT }}</h2>
-              <div class="jgrid">
-                <div
-                  v-for="t in rows"
-                  :key="t.id"
-                  class="jcell"
-                  :class="{ joined: joinedIds.includes(t.id) }"
-                >
-                  <div class="jnum display">T{{ t.id }}</div>
-                  <div class="jname">{{ t.name }}</div>
-                  <div class="jstate">{{ joinedIds.includes(t.id) ? '入室済み' : '待機中' }}</div>
-                </div>
+            <div class="qr-frame">
+              <QrCanvas :text="joinUrl" :size="300" />
+            </div>
+          </div>
+          <div class="slots-head">
+            <span class="kicker">TABLES JOINED</span>
+            <span class="num gold slots-count">{{ joinedIds.length }} / {{ RULES.TABLE_COUNT }}</span>
+          </div>
+          <div class="slots">
+            <div v-for="t in rows" :key="t.id" class="slot" :class="{ on: joinedIds.includes(t.id) }">
+              <div class="slot-num latin">{{ t.id }}</div>
+              <div class="slot-meta">
+                <div class="slot-name">{{ t.name }}</div>
+                <div class="slot-state">{{ joinedIds.includes(t.id) ? '入室済み' : '待機中' }}</div>
               </div>
             </div>
           </div>
         </template>
         <template v-else>
-          <div class="center stack-lg">
-            <div v-if="isFinalQuestion" class="final-hero">
-              <div class="final-sub display">FINAL QUESTION</div>
-              <div class="final-main display foil">最終問題 配当3倍</div>
-              <div class="final-note">ここで全額勝負も…？</div>
-            </div>
-            <div v-else class="next-hero">
-              <div class="muted">次は</div>
-              <div class="next-main display foil">第{{ currentQ }}問</div>
+          <div class="next" :class="{ 'has-q': currentQuestion }">
+            <template v-if="isFinalQuestion">
+              <div class="kicker next-k">FINAL QUESTION</div>
+              <div class="next-main display foil">最終問題 配当{{ RULES.FINAL_MULTIPLIER }}倍</div>
+              <div class="next-note">ここで全額勝負も…？</div>
+            </template>
+            <template v-else>
+              <div class="kicker next-k">NEXT</div>
+              <div class="next-main latin foil">QUESTION {{ pad2(currentQ) }}</div>
+              <div class="next-note">まもなく回答受付</div>
+            </template>
+            <span class="dots" style="margin-top: 0.6em"><i></i><i></i><i></i></span>
+          </div>
+          <!-- 受付前から問題と選択肢を見せる -->
+          <div v-if="currentQuestion" class="next-q">
+            <p class="qtext display">{{ currentQuestion.text }}</p>
+            <div class="choices">
+              <div v-for="(c, i) in currentQuestion.choices ?? []" :key="i" class="choice">
+                <span class="suit" :class="{ 'is-red': SUIT_RED[i] }">{{ SUITS[i] }}</span>
+                <span class="ctext"><b class="clabel latin">{{ CHOICE_LABELS[i] }}</b>{{ c }}</span>
+              </div>
             </div>
           </div>
         </template>
       </main>
 
-      <!-- ===== 受付中 / 締切 ===== -->
-      <main v-else-if="phase === 'answering' || phase === 'closed'" class="body qbody">
-        <section class="qpane felt">
+      <!-- ===== 出題 / 締切 / 正解発表 / 精算 ===== -->
+      <main v-else-if="inQuestion" class="body qbody">
+        <div class="qtop">
           <p class="qtext display">{{ currentQuestion?.text }}</p>
-          <div class="choices">
-            <div v-for="(c, i) in currentQuestion?.choices ?? []" :key="i" class="choice">
-              <span class="clabel display">{{ CHOICE_LABELS[i] }}</span>
-              <span>{{ c }}</span>
-            </div>
-          </div>
-        </section>
-
-        <aside class="side">
-          <div class="side-top">
-            <CountdownRing
-              v-if="phase === 'answering'"
-              :started-at="game?.startedAt"
-              :limit-sec="game?.timeLimitSec ?? RULES.DEFAULT_TIME_LIMIT_SEC"
-              :size="150"
-            />
-            <div v-else class="closed-badge">締め切りました</div>
-            <div class="count display">
-              送信 <span class="foil big2">{{ submittedCount }}</span> / {{ RULES.TABLE_COUNT }}
-            </div>
-          </div>
-          <div class="blist">
-            <div v-for="t in rows" :key="t.id" class="brow" :class="{ done: t.bet !== null }">
-              <div class="bname">
-                <span class="tnum display">T{{ t.id }}</span>
-                <span class="muted">{{ t.name }}</span>
-              </div>
-              <div v-if="t.bet !== null" class="bbet tabular">
-                {{ fmt(t.bet) }}<span class="unit">コイン</span>
-                <span class="bet-tag">BET!</span>
-              </div>
-              <div v-else class="thinking">考え中…</div>
-            </div>
-          </div>
-        </aside>
-      </main>
-
-      <!-- ===== 正解発表 / 精算 ===== -->
-      <main v-else-if="phase === 'revealed' || phase === 'settled'" class="body">
-        <div class="reveal-head">
-          <div class="muted">正解</div>
-          <div class="reveal-answer display foil">
-            {{ CHOICE_LABELS[correctIndex] }}. {{ currentQuestion?.choices?.[correctIndex] }}
+          <CountdownRing
+            v-if="phase === 'answering'"
+            :started-at="game?.startedAt"
+            :limit-sec="game?.timeLimitSec ?? RULES.DEFAULT_TIME_LIMIT_SEC"
+            :size="150"
+          />
+        </div>
+        <div class="choices">
+          <div
+            v-for="(c, i) in currentQuestion?.choices ?? []"
+            :key="i"
+            class="choice"
+            :class="{ correct: showResults && correctIndex === i, dim: showResults && correctIndex !== null && correctIndex !== i }"
+          >
+            <span class="suit" :class="{ 'is-red': SUIT_RED[i] }">{{ SUITS[i] }}</span>
+            <span class="ctext"><b class="clabel latin">{{ CHOICE_LABELS[i] }}</b>{{ c }}</span>
+            <span v-if="showResults && correctIndex === i" class="ok-tag">正解</span>
           </div>
         </div>
-        <table class="rtable">
-          <thead>
-            <tr>
-              <th>テーブル</th>
-              <th>回答</th>
-              <th>判定</th>
-              <th class="num">賭け金</th>
-              <th class="num">増減</th>
-              <th class="num">所持コイン</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="t in rows" :key="t.id">
-              <td>
-                <span class="tnum">T{{ t.id }}</span>
-                <span class="muted">{{ t.name }}</span>
-              </td>
-              <td>
-                <template v-if="t.result">
-                  <span v-if="t.result.answerIndex !== null">
-                    {{ CHOICE_LABELS[t.result.answerIndex] }}
-                  </span>
-                  <span v-else class="muted">未送信</span>
-                </template>
-                <span v-else class="muted">—</span>
-              </td>
-              <td>
-                <template v-if="t.result">
-                  <span v-if="t.result.correct" class="chip chip-green">正解</span>
-                  <span v-else class="chip chip-red">不正解</span>
-                </template>
-                <span v-else class="muted">—</span>
-              </td>
-              <td class="num tabular">{{ t.result ? fmt(t.result.bet) : fmt(t.bet) }}</td>
-              <td class="num tabular" :class="t.result ? (t.result.delta >= 0 ? 'green' : 'red') : ''">
-                {{ t.result ? fmtDelta(t.result.delta) : '—' }}
-              </td>
-              <td class="num tabular gold strong">{{ fmt(t.result ? t.result.after : t.coins) }}</td>
-            </tr>
-          </tbody>
-        </table>
+
+        <div class="tiles-head">
+          <span class="kicker">{{ showResults ? 'RESULTS ・ 各テーブルの結果' : 'TABLE BETS ・ 公開された賭け金' }}</span>
+          <span class="muted">送信 <b class="num gold sc">{{ submittedCount }}</b> / {{ RULES.TABLE_COUNT }}</span>
+        </div>
+        <div class="tiles">
+          <div
+            v-for="t in rows"
+            :key="t.id"
+            class="tile"
+            :class="{
+              done: t.bet !== null,
+              win: t.result && t.result.delta > 0,
+              lose: t.result && t.result.delta < 0,
+            }"
+          >
+            <div class="tile-top">
+              <span class="kicker tk">TABLE</span>
+              <span class="tile-num latin">{{ t.id }}</span>
+            </div>
+            <div class="tile-name">{{ t.name }}</div>
+            <div class="tile-body">
+              <!-- 精算後: 回答と増減 -->
+              <template v-if="t.result">
+                <span v-if="t.result.answerIndex != null" class="tile-suit" :class="{ 'is-red': SUIT_RED[t.result.answerIndex] }">
+                  {{ SUITS[t.result.answerIndex] }} {{ CHOICE_LABELS[t.result.answerIndex] }}
+                </span>
+                <span v-else class="muted tile-small">未送信</span>
+                <span class="tile-delta num" :class="t.result.delta > 0 ? 'green' : t.result.delta < 0 ? 'red' : 'muted'">
+                  {{ fmtDelta(t.result.delta) }}
+                </span>
+              </template>
+              <!-- 受付中〜発表: 賭け金のみ -->
+              <template v-else-if="t.bet !== null">
+                <span class="kicker tk">BET</span>
+                <span class="tile-bet num">{{ fmt(t.bet) }}</span>
+                <span v-if="t.bet > 0 && t.bet === t.coins" class="mult-tag">ALL IN</span>
+              </template>
+              <template v-else-if="phase === 'answering'">
+                <span class="dots dim-dots"><i></i><i></i><i></i></span>
+                <span class="muted tile-small">相談中…</span>
+              </template>
+              <span v-else class="muted tile-small">未送信</span>
+            </div>
+            <div class="tile-coins num">{{ fmt(t.result ? t.result.after : t.coins) }} コイン</div>
+          </div>
+        </div>
+
+        <div v-if="phase === 'closed'" class="nomore">
+          <span class="nm-suit">♠ ♥</span>
+          <span class="latin">NO MORE BETS</span>
+          <span class="nm-suit">♦ ♣</span>
+        </div>
       </main>
 
       <!-- ===== ランキング ===== -->
       <main v-else-if="phase === 'ranking'" class="body">
-        <h2 class="h2 center display">RANKING</h2>
+        <div class="st-head">
+          <div class="h2 latin">STANDINGS</div>
+          <div class="muted st-note">第{{ currentQ }}問 終了時点</div>
+        </div>
         <div class="rank-list">
-          <div v-for="r in ranking" :key="r.id" class="rank-row" :class="'r' + r.rank">
-            <div class="rnum display">{{ r.rank }}</div>
+          <div v-for="(r, k) in ranking" :key="r.id" class="rank-row" :style="{ animationDelay: k * 60 + 'ms' }">
+            <div class="rbar" :style="{ width: barW(r.coins) }"></div>
+            <div class="medal num" :class="'m' + r.rank">{{ r.rank }}</div>
             <div class="rname">
-              <div class="tnum display">T{{ r.id }} {{ r.name }}</div>
-              <div class="muted small">正解 {{ r.correctCount }}問</div>
+              <div class="rn">{{ r.name }}</div>
+              <div class="muted rc">正解 {{ r.correctCount }}問</div>
             </div>
-            <div class="rmove">
+            <div class="rmove num">
               <span v-if="move(r) > 0" class="green">▲{{ move(r) }}</span>
               <span v-else-if="move(r) < 0" class="red">▼{{ Math.abs(move(r)) }}</span>
-              <span v-else class="muted">—</span>
+              <span v-else class="muted">―</span>
             </div>
-            <div class="rcoins tabular foil display">{{ fmt(r.coins) }}</div>
+            <div class="rdelta num" :class="r.result ? (r.result.delta > 0 ? 'green' : r.result.delta < 0 ? 'red' : 'muted') : 'muted'">
+              {{ r.result ? fmtDelta(r.result.delta) : '' }}
+            </div>
+            <div class="rcoins num">{{ fmt(r.coins) }}</div>
           </div>
         </div>
       </main>
 
       <!-- ===== 終了 ===== -->
-      <main v-else-if="phase === 'finished'" class="body">
-        <h2 class="h2 center display">FINAL RESULT</h2>
+      <main v-else-if="phase === 'finished'" class="body final">
+        <div class="center">
+          <div class="h2 latin foil" style="font-size: 2.6em">FINAL RESULT</div>
+          <div class="muted final-sub">最終順位</div>
+        </div>
+        <div class="grow"></div>
         <div class="podium">
-          <div v-for="r in ranking.slice(0, 3)" :key="r.id" class="pod" :class="'p' + r.rank">
-            <div class="pmedal">{{ ['🥇', '🥈', '🥉'][r.rank - 1] ?? '' }}</div>
-            <div class="pname display">T{{ r.id }} {{ r.name }}</div>
-            <div class="pcoins tabular foil display">{{ fmt(r.coins) }}</div>
+          <div v-for="r in podium" :key="r.id" class="pod" :class="'p' + r.rank">
+            <div class="pname">{{ r.name }}</div>
+            <div class="pcoins num">{{ fmt(r.coins) }}</div>
+            <div class="pblock"><span class="latin">{{ r.rank }}</span></div>
           </div>
         </div>
-        <div class="rank-list" style="margin-top: 20px">
-          <div v-for="r in ranking.slice(3)" :key="r.id" class="rank-row">
-            <div class="rnum display">{{ r.rank }}</div>
-            <div class="rname">
-              <div class="tnum">T{{ r.id }} {{ r.name }}</div>
-            </div>
-            <div class="rcoins tabular foil display">{{ fmt(r.coins) }}</div>
+        <div class="rest">
+          <div v-for="r in ranking.slice(3)" :key="r.id" class="rest-item">
+            <span class="muted num">{{ r.rank }}位</span>
+            <b>{{ r.name }}</b>
+            <span class="num gold">{{ fmt(r.coins) }}</span>
           </div>
         </div>
-        <p v-if="tieGroups.length" class="center muted" style="margin-top: 16px">
+        <p v-if="tieGroups.length" class="center muted" style="margin: 0.4em 0 0">
           同点のテーブルがあります → じゃんけん決着
         </p>
       </main>
@@ -283,405 +311,625 @@ const tieGroups = computed(() => {
 </template>
 
 <style scoped>
+/* 1920px幅で 1em ≒ 26px。プロジェクター解像度に合わせて全体が拡縮する */
 .screen {
+  position: relative;
   min-height: 100vh;
-  padding: 22px 34px 30px;
+  font-size: clamp(14px, 1.36vw, 30px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  background: radial-gradient(ellipse at 50% 25%, var(--bg-hi), var(--bg-deep) 65%, #1a0406);
+  overflow: hidden;
+}
+.boot {
+  flex: 1;
+  display: grid;
+  place-items: center;
+}
+.bulbs {
+  height: 0.32em;
+  background: radial-gradient(circle, #ffe6a0 0 0.1em, transparent 0.15em) 0 0 / 0.85em 0.32em repeat-x;
+  opacity: 0.8;
+}
+.grow {
+  flex: 1;
 }
 
 /* ---- ヘッダ ---- */
 .shead {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--gold-line);
+  gap: 0.9em;
+  height: 3.4em;
+  padding: 0 1.8em;
+  background: linear-gradient(180deg, rgba(8, 6, 10, 0.85), rgba(8, 6, 10, 0.5));
+  border-bottom: 1px solid rgba(242, 201, 106, 0.45);
 }
 .brand {
-  font-size: 1.7rem;
   font-weight: 900;
-  letter-spacing: 0.18em;
-}
-.suits {
-  letter-spacing: 0.4em;
+  font-size: 1.35em;
+  letter-spacing: 0.08em;
   color: var(--gold);
-  opacity: 0.35;
-  font-size: 0.9rem;
+}
+.event {
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--muted);
 }
 .qno {
-  font-size: 1.5rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  font-size: 0.85em;
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  color: var(--gold);
 }
-.big {
-  font-size: 2.4rem;
-  font-weight: 900;
+.big-tag {
+  font-size: 0.62em;
+  padding: 0.3em 0.7em;
 }
-.big2 {
-  font-size: 2.6rem;
-  font-weight: 900;
+.pill {
+  padding: 0.25em 0.75em;
+  border-radius: 999px;
+  font-size: 0.68em;
+  font-weight: 700;
+  border: 1px solid rgba(242, 201, 106, 0.45);
+  background: rgba(242, 201, 106, 0.12);
+  color: var(--gold-hi);
+}
+.pill.tone-go {
+  border-color: rgba(95, 211, 154, 0.5);
+  background: rgba(95, 211, 154, 0.15);
+  color: var(--green);
+}
+.pill.tone-stop {
+  border-color: rgba(255, 90, 112, 0.5);
+  background: rgba(255, 90, 112, 0.15);
+  color: var(--red-hi);
 }
 .announce {
-  padding: 14px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, rgba(240, 192, 74, 0.26), rgba(240, 192, 74, 0.08));
-  border: 1px solid var(--gold-lo);
+  margin: 0.8em 1.8em 0;
+  padding: 0.55em;
+  border-radius: 0.5em;
+  background: rgba(242, 201, 106, 0.16);
+  border: 1px solid rgba(242, 201, 106, 0.55);
   color: var(--gold-hi);
   font-weight: 900;
-  font-size: 1.7rem;
+  font-size: 1.3em;
   text-align: center;
-  letter-spacing: 0.04em;
-  text-shadow: 0 0 24px rgba(240, 192, 74, 0.5);
 }
 .body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+  padding: 1.2em 1.8em 1.4em;
+  min-height: 0;
+}
+.kicker {
+  font-size: 0.6em;
+  letter-spacing: 0.35em;
+  color: var(--muted);
+}
+.h2 {
+  font-weight: 900;
+  font-size: 1.5em;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+.h2.foil {
+  color: transparent;
+}
+
+/* ---- 待機: 参加受付 ---- */
+.join {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2.4em;
+  align-items: center;
+  padding: 0 1.2em;
+}
+.join-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+.logo {
+  font-weight: 900;
+  font-size: 6.4em;
+  line-height: 0.85;
+  letter-spacing: 0.03em;
+}
+.logo-sub {
+  font-weight: 700;
+  font-size: 1.5em;
+  letter-spacing: 0.6em;
+  color: var(--gold);
+}
+.join-lead {
+  font-size: 1.1em;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+.join-url {
+  font-size: 1.2em;
+  letter-spacing: 0.06em;
+  color: var(--gold-hi);
+}
+.qr-frame {
+  padding: 0.7em;
+  border-radius: 0.8em;
+  background: #f4efe4;
+  box-shadow: 0 0 0 0.2em var(--gold), 0 0 0 0.35em #3a2a0c, 0 1.2em 2.5em rgba(0, 0, 0, 0.6);
+  line-height: 0;
+}
+.qr-frame :deep(canvas) {
+  width: 11em !important;
+  height: 11em !important;
+  padding: 0 !important;
+  border-radius: 0.3em;
+}
+.slots-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.slots-count {
+  font-weight: 600;
+  font-size: 1em;
+}
+.slots {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5em;
+}
+.slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: 3.2em;
+  padding: 0.4em;
+  border-radius: 0.6em;
+  border: 1px solid rgba(239, 231, 214, 0.12);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--faint);
+  transition: all 0.4s;
+}
+.slot.on {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(242, 201, 106, 0.22), rgba(0, 0, 0, 0.4));
+  color: var(--gold-hi);
+}
+.slot-num {
+  font-weight: 900;
+  font-size: 1.4em;
+}
+.slot-name {
+  font-size: 0.5em;
+  font-weight: 700;
+}
+.slot-state {
+  font-size: 0.55em;
+  font-weight: 700;
+}
+
+/* ---- 待機: 次の問題 ---- */
+.next {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  text-align: center;
+}
+.next-k {
+  font-size: 0.8em;
+  color: var(--gold);
+}
+.next-main {
+  font-weight: 900;
+  font-size: 4em;
+  line-height: 1.15;
+  /* foil は背景を文字で切り抜くので、Q の尾が欠けないよう下に余白を足す */
+  padding-bottom: 0.12em;
+}
+.next.has-q {
+  flex: none;
+  gap: 0.2em;
+  padding-top: 0.6em;
+}
+.next.has-q .next-main {
+  font-size: 3em;
+}
+.next-q {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 18px;
+  gap: 1.2em;
 }
-.h2 {
-  font-size: 2rem;
-  margin: 0;
-  letter-spacing: 0.14em;
-  color: var(--gold-hi);
-}
-.stack-lg {
-  display: grid;
-  gap: 18px;
-}
-
-/* ---- 待機中 ---- */
-.waiting {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 44px;
-  align-items: center;
-}
-.qr-area {
+.next-q .qtext {
+  flex: none;
   text-align: center;
-  padding: 22px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent);
-  border: 1px solid var(--gold-line);
 }
-.jgrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-top: 16px;
-}
-.jcell {
-  padding: 14px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, var(--panel-2), var(--panel));
-  border: 1px solid #45202e;
-}
-.jcell.joined {
-  border-color: var(--gold-lo);
-  background: linear-gradient(180deg, rgba(240, 192, 74, 0.18), rgba(240, 192, 74, 0.04));
-  box-shadow: 0 0 22px rgba(240, 192, 74, 0.2);
-}
-.jnum {
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: var(--gold-hi);
-}
-.jname {
-  font-size: 0.9rem;
-  color: var(--muted);
-}
-.jstate {
-  margin-top: 6px;
-  font-weight: 800;
-  font-size: 0.85rem;
-}
-.jcell.joined .jstate {
-  color: var(--gold);
-}
-
-/* ---- 次の問題 ---- */
-.final-hero {
-  display: grid;
-  gap: 12px;
-}
-.final-sub {
-  letter-spacing: 0.42em;
-  color: var(--red-hi);
+.next-note {
+  font-size: 1.1em;
   font-weight: 700;
-}
-.final-main {
-  font-size: 5rem;
-  font-weight: 900;
-  line-height: 1.15;
-}
-.final-note {
-  color: var(--muted);
-  font-size: 1.35rem;
-}
-.next-main {
-  font-size: 4.4rem;
-  font-weight: 900;
+  color: rgba(239, 231, 214, 0.75);
 }
 
-/* ---- 受付中 ---- */
-.qbody {
-  flex-direction: row;
-  align-items: stretch;
-  gap: 28px;
-}
-.qpane {
-  flex: 1.3;
+/* ---- 出題 ---- */
+.qtop {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 30px 32px;
+  align-items: center;
+  gap: 1em;
+  min-height: 3.4em;
 }
 .qtext {
-  font-size: 2.4rem;
-  font-weight: 800;
-  line-height: 1.55;
-  margin: 0 0 26px;
+  flex: 1;
+  margin: 0;
+  font-size: 1.5em;
+  font-weight: 900;
+  line-height: 1.4;
+  text-wrap: pretty;
 }
 .choices {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5em;
 }
 .choice {
   display: flex;
-  gap: 18px;
   align-items: center;
-  padding: 14px 20px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #fbf3e4, #e9dcc4);
-  border: 1px solid #b9a177;
-  color: #231a10;
-  font-size: 1.55rem;
+  gap: 0.7em;
+  min-height: 2.9em;
+  padding: 0.3em 0.8em 0.3em 0.5em;
+  border-radius: 0.6em;
+  background: var(--lacquer);
+  border: 1px solid rgba(242, 201, 106, 0.3);
+  transition: opacity 0.5s, box-shadow 0.5s;
+}
+.choice .suit {
+  font-size: 0.85em;
+}
+.choice.correct {
+  border-color: var(--gold-hi);
+  box-shadow: 0 0 0 2px var(--gold), 0 0 1.4em rgba(242, 201, 106, 0.5);
+}
+.choice.dim {
+  opacity: 0.3;
+}
+.ctext {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.05em;
   font-weight: 700;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 .clabel {
-  display: grid;
-  place-items: center;
-  width: 2em;
-  height: 2em;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #2b141e, #170a10);
-  color: var(--gold-hi);
-  font-weight: 900;
-  flex: none;
+  margin-right: 0.5em;
+  color: var(--gold);
 }
-.side {
+.ok-tag {
+  padding: 0.2em 0.5em;
+  border-radius: 0.3em;
+  background: var(--gold-plate);
+  color: var(--gold-ink);
+  font-weight: 900;
+  font-size: 0.65em;
+  letter-spacing: 0.1em;
+  animation: macau-pop 0.4s ease-out;
+}
+.tiles-head {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.85em;
+}
+.tiles-head .kicker {
+  font-size: 0.7em;
+}
+.sc {
+  font-size: 1.3em;
+  font-weight: 600;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5em;
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15em;
+  min-height: 7.4em;
+  padding: 0.55em 0.35em;
+  border-radius: 0.7em;
+  border: 1px solid rgba(239, 231, 214, 0.12);
+  background: rgba(0, 0, 0, 0.3);
+  transition: border-color 0.3s, background 0.3s;
+}
+.tile.done {
+  border-color: rgba(242, 201, 106, 0.6);
+  background: linear-gradient(180deg, rgba(242, 201, 106, 0.12), rgba(0, 0, 0, 0.4));
+}
+.tile.win {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(242, 201, 106, 0.25), rgba(0, 0, 0, 0.4));
+}
+.tile.lose {
+  border-color: rgba(239, 231, 214, 0.12);
+  background: rgba(0, 0, 0, 0.55);
+}
+.tile-top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3em;
+}
+.tk {
+  font-size: 0.42em;
+  letter-spacing: 0.25em;
+}
+.tile-num {
+  font-weight: 900;
+  font-size: 1.15em;
+  color: var(--gold);
+}
+.tile-name {
+  font-size: 0.5em;
+  color: var(--muted);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile-body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-.side-top {
-  display: flex;
   align-items: center;
-  gap: 20px;
   justify-content: center;
+  gap: 0.2em;
+  animation: macau-pop 0.35s ease-out;
 }
-.count {
-  font-size: 1.3rem;
-  font-weight: 800;
+.tile-bet {
+  font-weight: 700;
+  font-size: 1.45em;
+  line-height: 1;
+  color: var(--gold-hi);
 }
-.closed-badge {
-  padding: 18px 22px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #8d1527, var(--red-deep));
-  border: 1px solid #a8263a;
-  color: #ffdfe4;
-  font-weight: 900;
-  font-size: 1.5rem;
-  box-shadow: 0 0 30px rgba(224, 48, 73, 0.35);
+.tile-suit {
+  font-family: serif;
+  font-size: 0.9em;
 }
-.blist {
-  display: grid;
-  gap: 9px;
+.tile-suit.is-red {
+  color: var(--red);
 }
-.brow {
+.tile-delta {
+  font-weight: 700;
+  font-size: 1.25em;
+  line-height: 1;
+}
+.tile-small {
+  font-size: 0.58em;
+  font-weight: 700;
+}
+.tile-coins {
+  font-size: 0.55em;
+  color: var(--muted);
+}
+.tile .mult-tag {
+  font-size: 0.42em;
+}
+.dim-dots i {
+  width: 0.3em;
+  height: 0.3em;
+  background: rgba(239, 231, 214, 0.5);
+}
+.nomore {
+  position: absolute;
+  left: -1em;
+  right: -1em;
+  top: 7.2em;
+  height: 4em;
+  transform: rotate(-3deg);
+  background: linear-gradient(180deg, #a3142e, #6d0a1d);
+  border-top: 3px solid var(--gold);
+  border-bottom: 3px solid var(--gold);
+  box-shadow: 0 1em 2em rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 13px 18px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, var(--panel-2), var(--panel));
-  border: 1px solid #45202e;
-  font-size: 1.25rem;
-  transition: all 0.25s ease;
-}
-.brow.done {
-  border-color: var(--gold-lo);
-  background: linear-gradient(180deg, rgba(240, 192, 74, 0.16), rgba(240, 192, 74, 0.04));
-  box-shadow: 0 0 20px rgba(240, 192, 74, 0.18);
-}
-.bname {
-  flex: 1;
-  display: flex;
-  gap: 12px;
-  align-items: baseline;
-}
-.tnum {
+  justify-content: center;
+  gap: 1.2em;
   font-weight: 900;
-  color: var(--gold-hi);
+  font-size: 1em;
+  animation: macau-pop 0.4s ease-out;
 }
-.bbet {
-  font-weight: 900;
-  color: var(--gold-hi);
-  font-size: 1.6rem;
-  font-family: var(--display);
+.nomore .latin {
+  font-size: 2.2em;
+  letter-spacing: 0.12em;
+  color: var(--gold-pale);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
 }
-.unit {
-  font-size: 0.78rem;
-  margin-left: 3px;
-  opacity: 0.8;
-}
-.bet-tag {
-  margin-left: 12px;
-  font-size: 0.82rem;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #e8445b, var(--red));
-  color: #fff;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  vertical-align: middle;
-  box-shadow: 0 0 16px rgba(224, 48, 73, 0.6);
-}
-.thinking {
-  color: var(--muted);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-/* ---- 正解発表 ---- */
-.reveal-head {
-  text-align: center;
-}
-.reveal-answer {
-  font-size: 3.2rem;
-  font-weight: 900;
-  line-height: 1.35;
-}
-.rtable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 1.32rem;
-}
-.rtable th {
-  text-align: left;
-  color: var(--muted);
-  font-size: 0.92rem;
-  letter-spacing: 0.1em;
-  padding: 9px 12px;
-  border-bottom: 1px solid var(--gold-line);
-}
-.rtable td {
-  padding: 13px 12px;
-  border-bottom: 1px solid #3a1a26;
-}
-.rtable .num {
-  text-align: right;
-}
-.strong {
-  font-weight: 900;
+.nm-suit {
+  font-family: serif;
+  font-size: 1.1em;
+  color: var(--gold);
 }
 
 /* ---- ランキング ---- */
+.st-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 1em;
+}
+.st-note {
+  font-size: 0.6em;
+  font-weight: 700;
+}
 .rank-list {
   display: grid;
-  gap: 10px;
+  gap: 0.35em;
+  padding: 0 1em;
 }
 .rank-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 15px 22px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, var(--panel-2), var(--panel));
-  border: 1px solid #45202e;
-  font-size: 1.35rem;
+  gap: 0.8em;
+  min-height: 2.5em;
+  padding: 0 1em 0 0.5em;
+  border-radius: 0.55em;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(242, 201, 106, 0.18);
+  overflow: hidden;
+  animation: macau-rise 0.4s ease-out both;
 }
-.rank-row.r1 {
-  border-color: var(--gold);
-  background:
-    linear-gradient(180deg, rgba(240, 192, 74, 0.2), rgba(240, 192, 74, 0.05));
-  box-shadow: 0 0 34px rgba(240, 192, 74, 0.3);
+.rbar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, rgba(242, 201, 106, 0.04), rgba(242, 201, 106, 0.2));
+  transition: width 0.8s ease-out;
 }
-.rank-row.r2 {
-  border-color: #8d94a6;
+.rank-row > *:not(.rbar) {
+  position: relative;
 }
-.rank-row.r3 {
-  border-color: #a9743f;
+.medal {
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.85em;
+  background: rgba(239, 231, 214, 0.14);
+  flex: none;
 }
-.rnum {
-  font-size: 2.2rem;
-  font-weight: 900;
-  min-width: 2.4em;
-  text-align: center;
-  color: var(--gold-hi);
+.medal.m1 {
+  background: var(--gold);
+  color: #1a1206;
+}
+.medal.m2 {
+  background: #c9ced6;
+  color: #1a1206;
+}
+.medal.m3 {
+  background: #c88a4a;
+  color: #1a1206;
 }
 .rname {
   flex: 1;
 }
-.small {
-  font-size: 0.86rem;
+.rn {
+  font-size: 1em;
+  font-weight: 900;
+}
+.rc {
+  font-size: 0.5em;
 }
 .rmove {
-  font-weight: 900;
-  min-width: 4em;
+  width: 3em;
   text-align: center;
+  font-size: 0.75em;
+}
+.rdelta {
+  width: 5em;
+  text-align: right;
+  font-size: 0.8em;
 }
 .rcoins {
-  font-size: 2rem;
-  font-weight: 900;
-  min-width: 7em;
+  width: 5.5em;
   text-align: right;
+  font-weight: 600;
+  font-size: 1.35em;
+  color: var(--gold-hi);
 }
 
 /* ---- 表彰 ---- */
+.final {
+  padding-bottom: 0;
+}
+.final-sub {
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+}
 .podium {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  align-items: end;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1em;
 }
 .pod {
-  padding: 24px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, var(--panel-2), var(--panel));
-  border: 1px solid #45202e;
-  text-align: center;
-}
-.pod.p1 {
-  border-color: var(--gold);
-  background: linear-gradient(180deg, rgba(240, 192, 74, 0.2), rgba(240, 192, 74, 0.04));
-  transform: scale(1.07);
-  box-shadow: 0 0 44px rgba(240, 192, 74, 0.32);
-}
-.pod.p2 {
-  border-color: #8d94a6;
-}
-.pod.p3 {
-  border-color: #a9743f;
-}
-.pmedal {
-  font-size: 3.2rem;
+  width: 11em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35em;
+  animation: macau-rise 0.6s ease-out both;
 }
 .pname {
-  font-size: 1.45rem;
+  font-size: 1.2em;
   font-weight: 900;
-  margin: 8px 0;
-  color: var(--gold-hi);
 }
 .pcoins {
-  font-size: 2.1rem;
+  font-weight: 600;
+  font-size: 1.3em;
+  color: var(--gold-hi);
+}
+.pblock {
+  width: 100%;
+  border-radius: 0.55em 0.55em 0 0;
+  display: flex;
+  justify-content: center;
+  padding-top: 0.5em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.pblock .latin {
   font-weight: 900;
+  font-size: 3.2em;
+  line-height: 1;
+  color: #1a1206;
+}
+.p1 .pblock {
+  height: 10em;
+  background: linear-gradient(180deg, var(--gold), rgba(8, 6, 10, 0.9) 95%);
+}
+.p2 .pblock {
+  height: 7.8em;
+  background: linear-gradient(180deg, #c9ced6, rgba(8, 6, 10, 0.9) 95%);
+}
+.p3 .pblock {
+  height: 6em;
+  background: linear-gradient(180deg, #c88a4a, rgba(8, 6, 10, 0.9) 95%);
+}
+.p1 {
+  animation-delay: 0.3s;
+}
+.rest {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  padding: 0.6em 0 0.8em;
+  border-top: 1px solid rgba(242, 201, 106, 0.4);
+}
+.rest-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+  padding: 0.3em 0.7em;
+  border-radius: 0.4em;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 0.75em;
 }
 </style>

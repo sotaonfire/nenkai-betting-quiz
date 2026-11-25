@@ -1,0 +1,501 @@
+/* ============================================================
+   CWD CASINO — MACAU テーマ（スマホ画面・スライド画面専用）
+   .macau 配下にだけ効きます。司会コンソール（AdminView）は既存の style.css のまま。
+   ============================================================ */
+.macau {
+  
+  --bg: #120405;
+  --bg-deep: #3a070c;
+  --bg-hi: #8a1420;
+  --panel: #2e0609;
+  --panel-2: #6e0f17;
+  --panel-3: #3a0a0f;
+
+  
+  --felt: #8a1420;
+  --felt-2: #3a070c;
+  --felt-line: rgba(242, 201, 106, 0.45);
+
+  
+  --gold: #f2c96a;
+  --gold-hi: #f7dc8f;
+  --gold-pale: #fff6d6;
+  --gold-lo: #a8741f;
+  --gold-dim: #6b4a12;
+  --gold-line: rgba(242, 201, 106, 0.3);
+  --gold-ink: #2a1a04;
+
+  
+  --red: #ff5a70;
+  --red-hi: #ff8a99;
+  --red-deep: #b3192f;
+  --red-wine: #43101c;
+  --green: #5fd39a;
+
+  
+  --fg: #efe7d6;
+  --muted: rgba(239, 231, 214, 0.6);
+  --faint: rgba(239, 231, 214, 0.4);
+
+  
+  --line: rgba(239, 231, 214, 0.12);
+  --bg-2: #1a0507;
+
+  --radius: 14px;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  --inner-gold: inset 0 0 0 1px var(--gold-line);
+
+  --display: 'Zen Old Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+  --latin: 'Cinzel', 'Zen Old Mincho', serif;
+  --num: 'Oswald', 'Zen Kaku Gothic New', sans-serif;
+  --body: 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+
+  --gold-plate: linear-gradient(180deg, #fbe39a, #e0ae4a 45%, #b07a22 55%, #e9bd5c);
+  --lacquer: radial-gradient(ellipse at 25% 0%, var(--panel-2), var(--panel) 72%);
+
+  color-scheme: dark;
+}
+.macau, .macau * {
+  box-sizing: border-box;
+}
+.macau {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  color: var(--fg);
+  font-family: var(--body);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(120% 60% at 50% -10%, rgba(200, 30, 40, 0.55) 0%, transparent 62%),
+    radial-gradient(ellipse at 50% 30%, var(--bg-deep) 0%, var(--bg) 75%);
+  background-attachment: fixed;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+/* isolation で重なり順が閉じるため、確認ダイアログを開いている間は
+   .macau の外にある通信切断バナー（z-index: 90）より画面ごと手前に出す */
+.macau.modal-open {
+  z-index: 100;
+}
+.macau::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(242, 201, 106, 0.03) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(-45deg, rgba(242, 201, 106, 0.03) 0 1px, transparent 1px 22px);
+}
+.macau a {
+  color: var(--gold);
+}
+.macau a:hover {
+  color: var(--gold-pale);
+}
+.macau button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.macau input,
+.macau select,
+.macau textarea {
+  font: inherit;
+  color: var(--fg);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(242, 201, 106, 0.45);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.macau input::placeholder {
+  color: var(--faint);
+}
+.macau input:focus,
+.macau select:focus,
+.macau textarea:focus {
+  outline: none;
+  border-color: var(--gold-hi);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(242, 201, 106, 0.2);
+}
+.macau input[type='range'] {
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  accent-color: var(--gold);
+}
+.macau .display {
+  font-family: var(--display);
+  letter-spacing: 0.04em;
+}
+.macau .latin {
+  font-family: var(--latin);
+}
+.macau .num {
+  font-family: var(--num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+.macau .kicker {
+  font-family: var(--num);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  color: rgba(242, 201, 106, 0.8);
+}
+.macau .foil {
+  background: linear-gradient(100deg, #a8741f 0%, #f2c96a 18%, #fff6d6 28%, #f2c96a 38%, #a8741f 55%, #f2c96a 75%, #a8741f 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: macau-foil 9s linear infinite;
+}
+@keyframes macau-foil {
+  to {
+    background-position: -200% 50%;
+  }
+}
+.macau .rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gold);
+}
+.macau .rule::before,
+.macau .rule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold));
+}
+.macau .rule::after {
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+.macau .rule-mark::after {
+  content: '';
+}
+.macau .rule-mark > i,
+.macau .rule-gem {
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  background: var(--gold);
+  flex: none;
+}
+.macau .dots {
+  display: inline-flex;
+  gap: 7px;
+}
+.macau .dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: macau-dotpulse 1.4s ease-in-out infinite;
+}
+.macau .dots i:nth-child(2) {
+  animation-delay: 0.25s;
+}
+.macau .dots i:nth-child(3) {
+  animation-delay: 0.5s;
+}
+@keyframes macau-dotpulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes macau-pop {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes macau-rise {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.macau .suit {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.3em;
+  height: 2.3em;
+  border-radius: 50%;
+  background: #0b0709;
+  box-shadow: 0 0 0 1.5px var(--gold);
+  font-family: serif;
+  font-size: 1.05em;
+  line-height: 1;
+  color: var(--fg);
+}
+.macau .suit.is-red {
+  color: var(--red);
+}
+.macau .btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(242, 201, 106, 0.35);
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 700;
+  color: var(--fg);
+  transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.macau .btn:hover:not(:disabled) {
+  background: rgba(242, 201, 106, 0.1);
+}
+.macau .btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.macau .btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.macau .btn-primary {
+  background: var(--gold-plate);
+  border-color: #fff0b8;
+  color: var(--gold-ink);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 0 var(--gold-dim), 0 10px 24px rgba(224, 174, 74, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.macau .btn-primary:hover:not(:disabled) {
+  background: var(--gold-plate);
+  filter: brightness(1.06);
+}
+.macau .btn-primary:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--gold-dim);
+}
+.macau .btn-primary:disabled {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(242, 201, 106, 0.25);
+  color: var(--muted);
+  box-shadow: none;
+  opacity: 1;
+}
+.macau .btn-danger {
+  background: linear-gradient(180deg, #c42a43, var(--red-deep));
+  border-color: #ffb3bd;
+  color: var(--gold-pale);
+  box-shadow: 0 3px 0 #4a0a16, inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.macau .btn-ghost {
+  background: transparent;
+  border-color: rgba(239, 231, 214, 0.25);
+  box-shadow: none;
+}
+.macau .btn-lg {
+  min-height: 56px;
+  padding: 14px 22px;
+  font-size: 1.05rem;
+  border-radius: 14px;
+}
+.macau .btn-block {
+  width: 100%;
+}
+.macau .card {
+  position: relative;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--gold-line);
+  border-radius: var(--radius);
+}
+.macau .felt {
+  background: var(--lacquer);
+  border: 1px solid var(--felt-line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.macau .muted {
+  color: var(--muted);
+}
+.macau .gold {
+  color: var(--gold-hi);
+}
+.macau .green {
+  color: var(--green);
+}
+.macau .red {
+  color: var(--red);
+}
+.macau .center {
+  text-align: center;
+}
+.macau .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.macau .row-wrap {
+  flex-wrap: wrap;
+}
+.macau .spacer {
+  flex: 1;
+}
+.macau .stack {
+  display: grid;
+  gap: 12px;
+}
+.macau .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(242, 201, 106, 0.3);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.macau .chip-gold {
+  background: rgba(242, 201, 106, 0.15);
+  border-color: rgba(242, 201, 106, 0.6);
+  color: var(--gold-hi);
+}
+.macau .chip-green {
+  background: rgba(95, 211, 154, 0.14);
+  border-color: rgba(95, 211, 154, 0.5);
+  color: var(--green);
+}
+.macau .chip-red {
+  background: rgba(255, 90, 112, 0.14);
+  border-color: rgba(255, 90, 112, 0.5);
+  color: var(--red-hi);
+}
+.macau .mult-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--red-deep);
+  border: 1px solid var(--gold);
+  color: var(--gold-pale);
+  font-family: var(--num);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+}
+.macau .tabular {
+  font-variant-numeric: tabular-nums;
+}
+.macau .coin-ico {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--gold-pale), var(--gold) 45%, var(--gold-lo));
+  flex: none;
+}
+.macau .coin-ico::after {
+  content: '';
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  border: 1px solid rgba(107, 74, 18, 0.6);
+}
+.macau .coin-chip {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, var(--gold) 0deg 14deg, var(--gold-lo) 14deg 28deg);
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+.macau .coin-chip > span {
+  display: inline-grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #2a1a08, #16100a);
+  border: 1px solid var(--gold-lo);
+  color: var(--gold-hi);
+  font-weight: 900;
+  font-family: var(--num);
+}
+.macau .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 3, 4, 0.72);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 100;
+}
+.macau .modal {
+  width: min(480px, 100%);
+  background: linear-gradient(180deg, var(--panel-3), #1a0507);
+  border: 1px solid var(--gold);
+  border-radius: 20px;
+  padding: 22px 20px;
+  box-shadow: var(--shadow);
+  animation: macau-rise 0.25s ease-out;
+}
+.macau .modal h3 {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  text-align: center;
+}
+@media (max-width: 600px) {
+.macau .modal-backdrop {
+    place-items: end stretch;
+    padding: 0;
+  }
+.macau .modal {
+    width: 100%;
+    border-radius: 26px 26px 0 0;
+    border-width: 1px 0 0;
+    padding: 22px 20px calc(24px + env(safe-area-inset-bottom));
+  }
+.macau .modal .row {
+    display: grid !important;
+    grid-template-columns: 1fr 1.6fr;
+  }
+.macau .modal .btn {
+    min-height: 54px;
+  }
+
+}
+.macau .conn-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px;
+  background: linear-gradient(180deg, #c42a43, var(--red-deep));
+  border-top: 1px solid var(--gold);
+  color: var(--gold-pale);
+  text-align: center;
+  font-weight: 700;
+  z-index: 90;
+}
+@media (prefers-reduced-motion: reduce) {
+.macau, .macau *,
+.macau *::before,
+.macau *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+}
+
