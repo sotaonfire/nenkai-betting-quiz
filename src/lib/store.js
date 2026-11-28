@@ -29,6 +29,10 @@ export const lastSyncAt = ref(0)
 export const phase = computed(() => game.value?.phase ?? 'waiting')
 export const currentQ = computed(() => game.value?.currentQ ?? 1)
 export const currentQuestion = computed(() => questions.value[String(currentQ.value)] ?? null)
+/** 第1問の待機中に、参加受付（QR・ルール）を出している状態。司会が問題を先出しすると false */
+export const isOpening = computed(
+  () => phase.value === 'waiting' && currentQ.value === 1 && !game.value?.previewQ1,
+)
 export const tableMap = computed(() => Object.fromEntries(tables.value.map((t) => [t.id, t])))
 
 let baseStarted = false

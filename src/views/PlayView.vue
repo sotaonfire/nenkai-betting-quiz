@@ -6,6 +6,7 @@ import {
   currentQ,
   currentQuestion,
   game,
+  isOpening,
   phase,
   reveal,
   settlement,
@@ -212,8 +213,8 @@ const resultHead = computed(() => {
         <!-- 開始前 -->
         <section v-if="phase === 'waiting'" class="panel">
           <div class="center-stack">
-            <div class="kicker-lg latin">{{ currentQ === 1 ? 'WELCOME' : 'QUESTION ' + pad2(currentQ) }}</div>
-            <div class="sub">{{ currentQ === 1 ? 'まもなくゲームが始まります' : '第' + currentQ + '問 準備中' }}</div>
+            <div class="kicker-lg latin">{{ isOpening ? 'WELCOME' : 'QUESTION ' + pad2(currentQ) }}</div>
+            <div class="sub">{{ isOpening ? 'まもなくゲームが始まります' : '第' + currentQ + '問 準備中' }}</div>
             <div v-if="isFinalQuestion" class="final-badge">最終問題 ・ 配当{{ multiplier }}倍</div>
           </div>
           <div class="center-stack">

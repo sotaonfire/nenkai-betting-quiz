@@ -5,6 +5,7 @@ import {
   currentQ,
   currentQuestion,
   game,
+  isOpening,
   pendingTableIds,
   phase,
   publicBets,
@@ -21,6 +22,7 @@ import { phaseLabel } from '../lib/phases.js'
 import { useNow } from '../lib/now.js'
 import CountdownRing from '../components/CountdownRing.vue'
 import QrCanvas from '../components/QrCanvas.vue'
+import ScreenAudio from '../components/ScreenAudio.vue'
 
 const booting = ref(true)
 const presence = usePresence()
@@ -106,6 +108,9 @@ const podium = computed(() => {
 
 <template>
   <div class="screen macau">
+    <!-- BGM。このスクリーン画面だけで鳴り、ゲーム中ずっとループする -->
+    <ScreenAudio />
+
     <div v-if="booting" class="boot"><span class="dots"><i></i><i></i><i></i></span></div>
 
     <template v-else>
@@ -124,14 +129,26 @@ const podium = computed(() => {
 
       <!-- ===== 待機中 ===== -->
       <main v-if="phase === 'waiting'" class="body">
-        <template v-if="currentQ === 1">
+        <template v-if="isOpening">
           <div class="join">
             <div class="join-copy">
               <div class="logo latin foil">CWD</div>
               <div class="logo-sub latin">CASINO</div>
-              <div class="rule" style="width: 22em"><span class="rule-gem"></span></div>
-              <div class="join-lead display">各テーブル1台、スマホでアクセスして参加</div>
+              <div class="rule"><span class="rule-gem"></span></div>
+              <div class="join-lead display">各テーブル1台、<br />スマホでアクセスして参加</div>
               <div class="join-url num">{{ joinUrl }}</div>
+            </div>
+            <div class="house">
+              <div class="house-h"><span class="latin">HOUSE RULES</span><span class="house-ja">ルール</span></div>
+              <ol class="house-list">
+                <li>全{{ RULES.QUESTION_COUNT }}問の4択クイズ。各テーブル<b>{{ fmt(RULES.INITIAL_COINS) }}コイン</b>からスタート</li>
+                <li>問題を見て、<b>回答と賭け金</b>を送信（{{ RULES.BET_STEP }}コイン単位・全額もOK）</li>
+                <li><b>送信後は変更不可</b>。スクリーンには賭け金だけが公開されます</li>
+                <li>正解なら賭け金ぶん<b class="green">プラス</b>、不正解なら<b class="red">マイナス</b></li>
+                <li>最終問題は<b>配当{{ RULES.FINAL_MULTIPLIER }}倍</b>。正解で賭け金の{{ RULES.FINAL_MULTIPLIER - 1 }}倍プラス</li>
+                <li>締切までに未送信だと<b class="red">−{{ RULES.MISSING_BET }}</b>。0コインでも正解すれば<b class="green">+{{ RULES.ZERO_COIN_REWARD }}</b>で復活</li>
+                <li>最後に<b>コインが一番多いテーブルが優勝</b>（同点はじゃんけん）</li>
+              </ol>
             </div>
             <div class="qr-frame">
               <QrCanvas :text="joinUrl" :size="300" />
@@ -427,10 +444,73 @@ const podium = computed(() => {
 .join {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 2.4em;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1.8em;
   align-items: center;
-  padding: 0 1.2em;
+  padding: 0 0.6em;
+}
+.house {
+  padding: 1em 1.2em 1.1em;
+  border-radius: 0.8em;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--gold-line);
+}
+.house-h {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7em;
+  padding-bottom: 0.5em;
+  margin-bottom: 0.7em;
+  border-bottom: 1px solid var(--gold-line);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+.house-ja {
+  font-size: 0.7em;
+  color: var(--muted);
+}
+.house-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6em;
+  list-style: none;
+  counter-reset: house;
+}
+.house-list li {
+  counter-increment: house;
+  position: relative;
+  padding-left: 2em;
+  font-size: 0.95em;
+  font-weight: 500;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+.house-list li::before {
+  content: counter(house);
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--gold);
+  color: var(--gold-ink);
+  font-family: var(--num);
+  font-weight: 700;
+  line-height: 1;
+}
+.house-list b {
+  color: var(--gold-hi);
+}
+.house-list b.green {
+  color: var(--green);
+}
+.house-list b.red {
+  color: var(--red-hi);
 }
 .join-copy {
   display: flex;

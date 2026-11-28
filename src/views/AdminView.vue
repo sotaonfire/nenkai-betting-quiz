@@ -8,6 +8,7 @@ import {
   currentQ,
   currentQuestion,
   game,
+  isOpening,
   pendingTableIds,
   phase,
   publicBets,
@@ -32,6 +33,7 @@ import {
   revealAnswer,
   runSettlement,
   setPhase,
+  setPreviewQ1,
   showRanking,
   startQuestion,
   undoSettlement,
@@ -253,7 +255,11 @@ async function submitProxy() {
         <section class="card pad">
           <h3 class="h3">フェーズ操作</h3>
           <div class="row row-wrap">
-            <button class="btn btn-primary btn-lg" :disabled="busy || phase !== 'waiting'"
+            <button v-if="phase === 'waiting' && currentQ === 1" class="btn btn-lg" :class="{ 'btn-primary': isOpening }" :disabled="busy"
+              @click="act(() => setPreviewQ1(isOpening), isOpening ? '第1問の問題と選択肢を表示しました' : '参加受付（QR）に戻しました')">
+              {{ isOpening ? '⓪ 第1問を先に見せる' : '⓪ 参加受付（QR）に戻す' }}
+            </button>
+            <button class="btn btn-lg" :class="{ 'btn-primary': !isOpening }" :disabled="busy || phase !== 'waiting'"
               @click="act(() => startQuestion(currentQ), `第${currentQ}問の受付を開始しました`)">
               ① 第{{ currentQ }}問 表示・受付開始
             </button>

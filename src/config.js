@@ -30,8 +30,6 @@ export const RULES = {
   ZERO_COIN_REWARD: 100, // 0コインのテーブルが正解したときの救済額
   MISSING_BET: 100, // 未送信のまま締め切られた場合の扱い（100を賭けて不正解）
   DEFAULT_TIME_LIMIT_SEC: 20, // カウントダウン（演出用）
-  BONUS_BEFORE_Q: 4, // 「復活ボーナス」を入れる想定の問題番号
-  DEFAULT_BONUS: 200, // 一律ボーナスの既定額
   PRESENCE_INTERVAL_MS: 15000, // 端末の生存通知の間隔
   PRESENCE_STALE_MS: 45000, // これを超えたら「切断」表示
 }

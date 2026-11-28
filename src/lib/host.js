@@ -28,7 +28,6 @@ import {
   submissionRef,
   submissionsCol,
   tableRef,
-  tablesCol,
 } from './paths.js'
 
 const claimsCol = () => collection(db, 'claims')
@@ -126,6 +125,11 @@ export async function setAnnouncement(text) {
 // ============================================================
 //  フェーズ操作
 // ============================================================
+
+/** 第1問の待機中だけ使う。参加受付（QR）と問題の先出しを切り替える */
+export async function setPreviewQ1(on) {
+  await updateDoc(gameRef(), { previewQ1: !!on, updatedAt: serverTimestamp() })
+}
 
 export async function startQuestion(questionNo) {
   await updateDoc(gameRef(), {
@@ -306,23 +310,6 @@ export async function adjustCoins({ tableId, delta, reason }) {
   return after
 }
 
-/** 全テーブルに一律で加算する（復活ボーナス演出用） */
-export async function bulkBonus({ delta, reason }) {
-  const amount = roundToStep(delta)
-  const snap = await getDocs(tablesCol())
-  const batch = writeBatch(db)
-  const changes = []
-  snap.docs.forEach((d) => {
-    const before = Number(d.data().coins ?? 0)
-    const next = Math.max(0, before + amount)
-    changes.push({ tableId: d.id, before, after: next })
-    batch.update(tableRef(d.id), { coins: next })
-  })
-  await batch.commit()
-  await logAction('bonus', { delta: amount, reason: reason ?? '', changes })
-  return changes
-}
-
 /** 司会による代理入力。公開用の賭け金も同時に書く */
 export async function proxySubmit({ questionNo, tableId, bet, answerIndex }) {
   const q = Number(questionNo)
@@ -409,6 +396,7 @@ export async function resetGame() {
   batch.update(gameRef(), {
     phase: 'waiting',
     currentQ: 1,
+    previewQ1: false,
     startedAt: null,
     announcement: '',
     updatedAt: serverTimestamp(),

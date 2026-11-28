@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { adjustCoins, bulkBonus, setAnnouncement } from '../lib/host.js'
+import { adjustCoins, setAnnouncement } from '../lib/host.js'
 import { RULES } from '../config.js'
 import { fmt } from '../lib/util.js'
 
@@ -9,9 +9,7 @@ const props = defineProps({ tables: { type: Array, default: () => [] } })
 const tableId = ref('')
 const amount = ref(RULES.BET_STEP)
 const reason = ref('')
-const bonusAmount = ref(RULES.DEFAULT_BONUS)
-const bonusReason = ref('復活ボーナス')
-const announcement = ref(`復活ボーナス 全テーブル +${RULES.DEFAULT_BONUS}！`)
+const announcement = ref('')
 const msg = ref('')
 const busy = ref(false)
 
@@ -40,14 +38,6 @@ function applyAdjust() {
     `T${tableId.value} に ${delta >= 0 ? '+' : ''}${fmt(delta)} を反映しました`,
   )
 }
-
-function applyBonus() {
-  const delta = Number(bonusAmount.value)
-  run(async () => {
-    await bulkBonus({ delta, reason: bonusReason.value })
-    if (announcement.value) await setAnnouncement(announcement.value)
-  }, `全テーブルに ${delta >= 0 ? '+' : ''}${fmt(delta)} を反映しました`)
-}
 </script>
 
 <template>
@@ -68,16 +58,6 @@ function applyBonus() {
         </div>
         <input v-model="reason" placeholder="理由（任意）" style="flex: 1; min-width: 180px" />
         <button class="btn btn-primary" :disabled="busy" @click="applyAdjust">反映</button>
-      </div>
-    </section>
-
-    <section class="card pad">
-      <h3 class="h3">全テーブル一律ボーナス（第{{ RULES.BONUS_BEFORE_Q }}問前の演出用）</h3>
-      <div class="row row-wrap">
-        <input v-model="bonusAmount" type="number" :step="RULES.BET_STEP" style="width: 120px; text-align: right" />
-        <input v-model="bonusReason" placeholder="理由" style="width: 180px" />
-        <input v-model="announcement" placeholder="スクリーンに出す文言" style="flex: 1; min-width: 220px" />
-        <button class="btn btn-primary" :disabled="busy" @click="applyBonus">全テーブルに反映</button>
       </div>
     </section>
 
